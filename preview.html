@@ -1,0 +1,153 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0,user-scalable=0">
+  <title>浏览CAD图纸</title>
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #webcad {
+      width: 100%;
+      height: 95%;
+    }
+  </style>
+</head>
+<body>
+  <script src="./GCAD.js"></script>
+
+  <button type="button" onclick="createmarks()">创建书签</button>
+  <button type="button" onclick="applymarks()">应用书签</button>
+  <button type="button" onclick="getalllayout()">所有布局</button>
+  <button type="button" onclick="getalllayer()">获取所有图层</button>
+  <button type="button" onclick="selectnote()">选取批注</button>
+
+  <div id="webcad"></div>
+
+  <script>
+    // 全局变量存储书签数据
+    let bookmarkData = null;
+
+    // 需要隐藏的功能按钮配置
+    const hideFunction = {
+      save: [ 
+        'saveImg', // 截图
+        'print', // 打印
+      ],
+      measures: [ 
+        'measureCoordinate', // 坐标
+      ],
+      viewport: [ 
+        'fullScreen', // 全屏
+      ]
+    }
+
+    // 核心工具函数：解析URL中的查询参数（适配 ?fieldId=4175）
+    function getUrlParam(name) {
+      const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`);
+      const r = window.location.search.substr(1).match(reg);
+      if (r != null) return decodeURIComponent(r[2]);
+      return null;
+    }
+
+    // 从URL中获取 fieldId 参数（关键适配：参数名改为 fieldId）
+    const fileIdFromUrl = getUrlParam('fileId');
+    // 参数校验：若未传 fieldId 则提示错误
+    if (!fileIdFromUrl) {
+      console.error("错误：URL缺少 fieldId 参数，示例格式：demo-2.html?fieldId=4175");
+    }
+
+    // 浩辰GCAD快速集成初始化
+    var gcad = GCAD({
+      vendorcode: "mysdk:6ff946e9d5368840085f231a04792e12", // 你的三方令牌（标识:令牌）
+      element: "webcad",  // CAD渲染容器ID（与页面div id一致）
+      param: {
+        cadServer: 'https://47.121.127.72', // 浩辰CAD服务器地址（无末尾斜杠）
+        fileId: fileIdFromUrl, // 动态加载URL中的 fieldId 作为图纸ID
+        language: 'zh', // 语言：zh（简中）/zh-tw（繁体）/en（英文）
+        toolbarHideItems: hideFunction, // 隐藏指定功能按钮
+        isHideMarks: true, // 隐藏系统自带书签（使用自定义书签功能）
+        apiHost: 'https://47.121.127.72', // API域名（与cadServer一致）
+      }
+    })
+
+    // SDK初始化成功回调
+    gcad.then((gstarSDK) => {
+      console.log("当前图纸ID（从URL获取）：", gstarSDK.fileId); // 验证参数是否正确传递
+      
+      // 关闭小地图（按需调整）
+      gstarSDK.disableMap();
+
+      // 设置测量结果小数精度（3位小数）
+      gstarSDK.measures.accuracy = 3;
+
+      // 功能按钮点击事件监听
+      gstarSDK.on('functionTrigger', (eventName, functionName) => {
+        console.log('点击的功能：' + functionName);
+      })
+
+      // 批注选中回调（可添加权限控制）
+      gstarSDK.notes.cbIsSelectNote = function (noteData) {
+        console.log('选中的批注详情：', noteData);
+        return true; // 返回true允许编辑批注，返回false禁止编辑
+      }
+
+      // 批注变更监听（新增/修改/删除）
+      gstarSDK.on('noteChange', (eventName, note) => {
+        console.log("批注操作类型：" + note.action);
+        console.log("批注数据：" + JSON.stringify(note.data));
+      })
+    }).catch((error) => {
+      // 错误捕获与友好提示
+      const errorMsg = error.message || '未知错误';
+      console.error("GCAD初始化失败：", error);
+    })
+
+    // 获取所有图层信息
+    function getalllayer() {
+      gcad.then((gstarSDK) => {
+        console.log("所有图层列表：", gstarSDK.layers);
+      }).catch(err => console.error("获取图层失败：", err));
+    }
+
+    // 获取所有布局信息
+    function getalllayout() {
+      gcad.then((gstarSDK) => {
+        console.log("所有布局列表：", gstarSDK.layouts);
+        console.log("当前激活布局：", gstarSDK.layoutInfo);
+      }).catch(err => console.error("获取布局失败：", err));
+    }
+
+    // 定位并选中localid=1的批注（需确保该批注存在）
+    function selectnote() {
+      gcad.then((gstarSDK) => {
+        gstarSDK.notes.focus('1'); // 视口定位到批注位置
+        gstarSDK.notes.select('1'); // 选中批注
+      }).catch(err => console.error("选取批注失败：", err));
+    }
+
+    // 创建当前视图的书签（数据可存入数据库）
+    function createmarks() {
+      gcad.then((gstarSDK) => {
+        const newMark = gstarSDK.marks.create("test-bookmark"); // 书签名称可自定义
+        bookmarkData = newMark; // 存储书签数据到全局变量
+        alert("书签创建成功！数据：\n" + JSON.stringify(newMark));
+      }).catch(err => console.error("创建书签失败：", err));
+    }
+
+    // 应用已创建的书签（跳转至对应视图）
+    function applymarks() {
+      if (!bookmarkData) {
+        alert("请先创建书签再执行应用操作！");
+        return;
+      }
+      gcad.then((gstarSDK) => {
+        gstarSDK.marks.apply(bookmarkData);
+      }).catch(err => console.error("应用书签失败：", err));
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0,user-scalable=0">
+  <title>编辑CAD图纸</title>
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    #wrap {
+      height: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <script type="text/javascript" src="./GCADCloudCAD.umd.js"></script>
+  <button type="button" onclick="savecad()">保存图纸</button>
+
+  <div id="wrap"></div>
+  
+  <script>
+	  
+	function getUrlParam(name) {
+	    const reg = new RegExp(`(^|&)${name}=([^&]*)(&|$)`);
+	    const r = window.location.search.substr(1).match(reg);
+	    if (r != null) return decodeURIComponent(r[2]);
+	    return null;
+	  }
+	  
+	// 从URL中获取 fieldId 参数（关键适配：参数名改为 fieldId）
+	//http://127.0.0.1:8848/demo/index.html?fileId=4176
+	const fileId = getUrlParam('fileId');
+	const fileName = getUrlParam('fileName');
+	// 初始化
+	async function init() {
+	  try {
+		const tokenUrl = "https://47.121.127.72/api/v2/_edit_integration/_get_token"    //获取授权的API接口
+		const authorization = "mysdk:6ff946e9d5368840085f231a04792e12" 					// 令牌，在系统后台“系统设置--三方接入”功能里面创建生成，参见api文档里面
+		const token = await getToken(tokenUrl,authorization);
+		//console.log('获取到的token:', token);
+		
+		// 使用获取到的token初始化CAD
+		await initializeCAD(token);
+	  } catch (error) {
+		console.error('初始化失败:', error);
+	  }
+	}
+	
+	
+    async function initializeCAD(token) {
+      try {
+        const webCAD = await GCADCloudCAD({
+          token: token,   //授权验证
+          element: 'wrap', // 容器id，和上面div里面的id一样
+          param: {
+            cadServer: 'https://47.121.127.72', // 必填，系统访问地址
+            fileId: Number(fileId), // 必填，CAD服务中对应图纸文件的id，api文档里面的上传图纸接口返回的fileid
+            fileName: fileName, // 图纸名称
+            uid: '100231',  // 客户自定义，给当前使用的用户分配一个唯一id值，供浩辰区分是不是同一个用户的一个依据
+            showCreateVersionButton: false, // 隐藏右上方 创建新版本 按钮
+            // hideLoading: true, // 隐藏loading加载
+          }
+        });
+
+        // 加载进度通知
+        webCAD.on('loadProcess', (msg, payload) => {
+          console.log('***加载进度***', payload);
+        });
+
+        // 接口错误，保存等涉及服务接口的错误
+        webCAD.on('interfaceError', (msg, payload) => {
+          console.log('***接口错误***', payload);
+        });
+
+        // 加载完成通知
+        webCAD.on('loadFinish', (msg, payload) => {
+          console.log('***加载完成***', payload);
+        });
+
+        // 加载错误，加载失败
+        webCAD.on('loadError', (msg, payload) => {
+          console.log('***加载错误***', payload);
+        });
+
+        // 主动保存版本
+        webCAD.on('saveVersion', (msg, payload) => {
+          console.log('***主动保存版本***', payload);
+        });
+
+        // 自动保存版本
+        webCAD.on('autoSaveVersion', (msg, payload) => {
+          console.log('***自动保存版本***', payload);
+        });
+
+        // 执行CAD命令
+        const eHandle = webCAD.on('executeCommand', (msg, payload) => {
+          console.log('***执行CAD命令***', payload);
+        });
+
+        // 取消事件监听 "执行CAD命令"
+        // webCAD.off(eHandle)
+
+        // webCAD被关闭
+        webCAD.on('close', (msg, payload) => {
+          console.log('***webCAD被关闭***', payload);
+        });
+
+        // 将webCAD暴露给全局，以便在savecad函数中使用
+        window.webCAD = webCAD;
+		
+		//启动
+		await webCAD.start()
+
+      } catch (error) {
+        console.error('初始化CAD失败:', error);
+      }
+    }
+
+    async function savecad() {
+      if (window.webCAD) {
+        try {
+          await window.webCAD.call('saveVersion', '新版本图纸名称');
+        } catch (error) {
+          console.error('保存图纸失败:', error);
+        }
+      } else {
+        console.error('webCAD未初始化');
+      }
+    }
+	
+	  // 获取授权验证token
+	function getToken(tokenUrl, authorization) {
+	  return new Promise((resolve, reject) => {
+		var req = new XMLHttpRequest();
+		var data = new FormData();
+		data.append("customer_flag", "general");
+		
+		req.open("POST", tokenUrl); 
+		req.setRequestHeader("Authorization", authorization);  
+		req.responseType = 'json';
+		
+		req.onload = function() {
+		  if (req.status == 200) {
+			resolve(req.response.data.token);
+		  } else {
+			reject(new Error('获取token失败'));
+		  }
+		};
+		
+		req.onerror = function() {
+		  reject(new Error('网络请求失败'));
+		};
+		
+		req.send(data);
+	  });
+	}
+
+    // 初始化CAD
+    init();
+  </script>
+</body>
+
+</html>
