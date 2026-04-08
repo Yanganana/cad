@@ -42,8 +42,8 @@
 	// 初始化
 	async function init() {
 	  try {
-		const tokenUrl = "https://47.121.127.72/api/v2/_edit_integration/_get_token"    //获取授权的API接口
-		const authorization = "mysdk:6ff946e9d5368840085f231a04792e12" 					// 令牌，在系统后台“系统设置--三方接入”功能里面创建生成，参见api文档里面
+		const tokenUrl = "http://183.234.222.38:1212/api/v2/_edit_integration/_get_token"    //获取授权的API接口
+		const authorization = "heita:e916a4fd33781a819ac1a4fd4909f7af"					// 令牌，在系统后台“系统设置--三方接入”功能里面创建生成，参见api文档里面
 		const token = await getToken(tokenUrl,authorization);
 		//console.log('获取到的token:', token);
 		
@@ -61,7 +61,7 @@
           token: token,   //授权验证
           element: 'wrap', // 容器id，和上面div里面的id一样
           param: {
-            cadServer: 'https://47.121.127.72', // 必填，系统访问地址
+            cadServer: 'http://183.234.222.38:1212', // 必填，系统访问地址
             fileId: Number(fileId), // 必填，CAD服务中对应图纸文件的id，api文档里面的上传图纸接口返回的fileid
             fileName: fileName, // 图纸名称
             uid: '100231',  // 客户自定义，给当前使用的用户分配一个唯一id值，供浩辰区分是不是同一个用户的一个依据
