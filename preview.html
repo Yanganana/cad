@@ -62,15 +62,15 @@
 
     // 浩辰GCAD快速集成初始化
     var gcad = GCAD({
-      vendorcode: "mysdk:6ff946e9d5368840085f231a04792e12", // 你的三方令牌（标识:令牌）
+      vendorcode: "heita:e916a4fd33781a819ac1a4fd4909f7af", // 你的三方令牌（标识:令牌）
       element: "webcad",  // CAD渲染容器ID（与页面div id一致）
       param: {
-        cadServer: 'https://47.121.127.72', // 浩辰CAD服务器地址（无末尾斜杠）
+        cadServer: 'http://183.234.222.38:1212', // 浩辰CAD服务器地址（无末尾斜杠）
         fileId: fileIdFromUrl, // 动态加载URL中的 fieldId 作为图纸ID
         language: 'zh', // 语言：zh（简中）/zh-tw（繁体）/en（英文）
         toolbarHideItems: hideFunction, // 隐藏指定功能按钮
         isHideMarks: true, // 隐藏系统自带书签（使用自定义书签功能）
-        apiHost: 'https://47.121.127.72', // API域名（与cadServer一致）
+        apiHost: 'http://183.234.222.38:1212', // API域名（与cadServer一致）
       }
     })
 
